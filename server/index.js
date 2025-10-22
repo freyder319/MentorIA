@@ -7,6 +7,7 @@ const dotenv = require('dotenv');
 const { fetch } = require('undici');
 const path = require('path');
 const { BedrockRuntimeClient, InvokeModelCommand, ConverseCommand } = require('@aws-sdk/client-bedrock-runtime');
+const { createClient } = require('@supabase/supabase-js');
 
 // Ensure we always load the .env from the project root, even if run from a subfolder
 const rootEnvPath = path.resolve(__dirname, '../.env');
@@ -22,6 +23,179 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+
+// Supabase server client (service role for server-side operations)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
+let supabaseServer = null;
+if (SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
+  supabaseServer = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+    auth: { persistSession: false },
+  });
+} else {
+  console.warn('[Supabase] SUPABASE_URL or SUPABASE_SERVICE_ROLE is not set. /api/activity-agent will be unavailable.');
+}
+
+// Create activity and guided plans per student for a class
+app.post('/api/activity-agent', async (req, res) => {
+  try {
+    const {
+      id_clase,
+      titulo,
+      objetivo,
+      nivel_taxonomia,
+      tipo_recurso,
+      complejidad,
+      contexto,
+    } = req.body || {};
+
+    // Basic validation
+    if (!id_clase || !titulo || !objetivo || !nivel_taxonomia || !tipo_recurso || !complejidad) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['id_clase', 'titulo', 'objetivo', 'nivel_taxonomia', 'tipo_recurso', 'complejidad'],
+      });
+    }
+
+    // If N8N webhook is configured, forward the request and return its response
+    const n8nUrl = process.env.N8N_WEBHOOK_URL;
+    if (n8nUrl) {
+      try {
+        const resp = await fetch(n8nUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id_clase,
+            titulo,
+            objetivo,
+            nivel_taxonomia,
+            tipo_recurso,
+            complejidad,
+            contexto: contexto || '',
+          }),
+        });
+        const json = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          return res.status(resp.status).json({ error: 'n8n error', details: json });
+        }
+        return res.status(200).json(json);
+      } catch (err) {
+        console.error('[activity-agent][n8n proxy] error', err);
+        return res.status(502).json({ error: 'Failed to reach n8n webhook' });
+      }
+    }
+
+    if (!supabaseServer) {
+      return res.status(500).json({ error: 'Supabase server credentials not configured' });
+    }
+
+    // 1) Insert actividad base
+    const { data: actIns, error: actErr } = await supabaseServer
+      .from('actividades')
+      .insert({ id_clase, titulo, objetivo, nivel_taxonomia, tipo_recurso, complejidad })
+      .select('id_actividad')
+      .single();
+    if (actErr) {
+      console.error('[activity-agent] insert actividades error', actErr);
+      return res.status(500).json({ error: 'Failed to create activity', details: String(actErr.message || actErr) });
+    }
+    const id_actividad = actIns.id_actividad;
+
+    // 2) Fetch students in class
+    const { data: enrolls, error: enrErr } = await supabaseServer
+      .from('clase_estudiante')
+      .select('id_estudiante')
+      .eq('id_clase', id_clase);
+    if (enrErr) {
+      console.error('[activity-agent] select clase_estudiante error', enrErr);
+      return res.status(500).json({ error: 'Failed to load class enrollments', details: String(enrErr.message || enrErr) });
+    }
+    const studentIds = (enrolls || []).map((r) => r.id_estudiante);
+
+    // 3) Load learning styles for those students (two-step to avoid relation-name issues)
+    let estiloPorEst = {};
+    if (studentIds.length === 0) {
+      // No students: create empty stats and return early with only the activity created
+      return res.json({
+        activity: { id_actividad, titulo },
+        stats: { estudiantes: 0, planes_creados: 0 },
+        por_estilo: {
+          visual: { estudiantes: 0 },
+          auditory: { estudiantes: 0 },
+          kinesthetic: { estudiantes: 0 },
+          desconocido: { estudiantes: 0 },
+        },
+      });
+    }
+
+    // Step 3a: perfiles -> id_estudiante, id_estilo_principal
+    const { data: perfiles, error: perfErr } = await supabaseServer
+      .from('perfil_aprendizaje_estudiante')
+      .select('id_estudiante, id_estilo_principal')
+      .in('id_estudiante', studentIds);
+    if (perfErr) {
+      console.error('[activity-agent] select perfil_aprendizaje_estudiante error', perfErr);
+      return res.status(500).json({ error: 'Failed to load learning profiles', details: String(perfErr.message || perfErr) });
+    }
+
+    const estiloIds = Array.from(new Set((perfiles || []).map((p) => p.id_estilo_principal).filter(Boolean)));
+
+    // Step 3b: estilos -> id_estilo, nombre
+    let idToNombre = {};
+    if (estiloIds.length > 0) {
+      const { data: estilos, error: estErr } = await supabaseServer
+        .from('estilos_aprendizaje')
+        .select('id_estilo, nombre')
+        .in('id_estilo', estiloIds);
+      if (estErr) {
+        console.error('[activity-agent] select estilos_aprendizaje error', estErr);
+        return res.status(500).json({ error: 'Failed to load learning styles', details: String(estErr.message || estErr) });
+      }
+      idToNombre = Object.fromEntries((estilos || []).map((e) => [e.id_estilo, e.nombre]));
+    }
+
+    estiloPorEst = Object.fromEntries(studentIds.map((id) => [id, null]));
+    for (const p of perfiles || []) {
+      const nombre = idToNombre[p.id_estilo_principal] || null;
+      estiloPorEst[p.id_estudiante] = nombre;
+    }
+
+    // 4) Initialize guided plan per student using RPC iniciar_plan_guiado
+    let planesCreados = 0;
+    const stats = { visual: 0, auditory: 0, kinesthetic: 0, desconocido: 0 };
+    for (const sid of studentIds) {
+      const estilo = estiloPorEst[sid] || null;
+      const { data: planId, error: planErr } = await supabaseServer.rpc('iniciar_plan_guiado', {
+        p_id_actividad: id_actividad,
+        p_id_estudiante: sid,
+        p_estilo: estilo,
+      });
+      if (planErr) {
+        console.error('[activity-agent] rpc iniciar_plan_guiado error', { sid, planErr });
+        return res.status(500).json({ error: 'Failed to initialize guided plan', details: String(planErr.message || planErr) });
+      }
+      planesCreados++;
+      const key = estilo === 'visual' || estilo === 'auditory' || estilo === 'kinesthetic' ? estilo : 'desconocido';
+      // @ts-ignore
+      stats[key] = (stats[key] || 0) + 1;
+    }
+
+    // 5) Respond
+    return res.json({
+      activity: { id_actividad, titulo },
+      stats: { estudiantes: studentIds.length, planes_creados: planesCreados },
+      por_estilo: {
+        visual: { estudiantes: stats.visual },
+        auditory: { estudiantes: stats.auditory },
+        kinesthetic: { estudiantes: stats.kinesthetic },
+        desconocido: { estudiantes: stats.desconocido },
+      },
+    });
+  } catch (err) {
+    console.error('[activity-agent] unexpected error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.post('/api/chat', async (req, res) => {
   try {
