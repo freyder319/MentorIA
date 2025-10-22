@@ -12,19 +12,22 @@ interface StudentChatProps {
 
 interface Message {
   id: number;
-  sender: 'user' | 'ai';
+  sender: 'user' | 'ai' | 'system';
   content: string;
   type?: 'question' | 'message';
   questions?: string[];
 }
 
+type Mode = 'coach' | 'direct';
+
 export function StudentChat({ onNavigate }: StudentChatProps) {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([
+  const [mode, setMode] = useState<Mode>('coach'); // \u2190 por defecto guía socrática
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       sender: 'ai',
-      content: '¡Hola! Soy tu asistente de pensamiento crítico. Estoy aquí para ayudarte a desarrollar tus ideas, no para darte respuestas directas. ¿En qué estás trabajando hoy?',
+      content: '¡Hola! Soy tu asistente de pensamiento crítico. No te daré respuestas directas: te guiaré con preguntas y pasos para que llegues por ti mismo/a. ¿En qué estás trabajando hoy? 📚',
       type: 'message'
     }
   ]);
@@ -38,7 +41,72 @@ export function StudentChat({ onNavigate }: StudentChatProps) {
     "¿Qué pasaría si cambiaras una variable en tu razonamiento?"
   ];
 
-  const handleSendMessage = async () => {
+  // --- NUEVO: función reutilizable para enviar señales de insight ---
+  async function sendInsightPing(userText: string, aiText: string) {
+    const currentClassId = "demo-class-1";
+    const currentStudentId = "s1";
+
+    const needs: string[] = [];
+    const t = userText.toLowerCase();
+    if (t.includes("contraargument")) needs.push("contraargumentos");
+    if (t.includes("resumen") || t.includes("síntesis") || t.includes("sintesis")) needs.push("síntesis");
+
+    const modality: "visual"|"auditory"|"reading"|"kinesthetic"|"mixed" = "mixed";
+    const level: "basico"|"intermedio"|"avanzado" = "intermedio";
+
+    try {
+      await fetch("/api/insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          classId: currentClassId,
+          studentId: currentStudentId,
+          modality,
+          level,
+          strengths: [],
+          needs,
+          recentTopic: "Cambio climático",
+          metrics: { analisis: 72, reflexion: 68, sintesis: 61 },
+          echo: { userText, aiText }
+        }),
+      });
+    } catch {}
+  }
+
+  // --- NUEVO: prompt según modo ---
+  function buildSystemPrompt(m: Mode) {
+    if (m === 'direct') {
+      return (
+        'Responde en español, de forma directa, concreta y breve. Da la mejor respuesta inmediata sin repetir la pregunta, sin añadir prefijos como "Assistant:" ni recapitulaciones.' +
+        ' Evita sermones y entrega solo la información necesaria.'
+      );
+    }
+    // coach (socrático)
+    return (
+      'Eres un tutor socrático en español. Tu objetivo es formar el razonamiento del estudiante.' +
+      ' No entregues respuestas finales directas a problemas o tareas evaluables.' +
+      ' En su lugar: (1) reconoce brevemente el objetivo; (2) formula de 1 a 3 preguntas guía específicas;' +
+      ' (3) ofrece un micro-plan de 3 pasos para avanzar; (4) propone un ejemplo pequeño (no la solución completa);' +
+      ' (5) pregunta si desea una pista adicional.' +
+      ' Sé breve y concreto. Evita sermones y generalidades.'
+    );
+  }
+
+  // --- NUEVO: heurística local para solicitudes de "dame la respuesta" ---
+  function shouldRefuseDirectAnswer(text: string) {
+    const t = text.toLowerCase();
+    const patterns = [
+      'dame la respuesta',
+      'resuélvelo por mí',
+      'resuelvelo por mi',
+      'hazme la tarea',
+      'solo la respuesta',
+      'no expliques',
+    ];
+    return patterns.some(p => t.includes(p));
+  }
+
+  async function handleSendMessage() {
     if (!message.trim() || loading) return;
 
     const userMessage: Message = {
@@ -54,15 +122,32 @@ export function StudentChat({ onNavigate }: StudentChatProps) {
     setLoading(true);
 
     try {
-      const systemPrompt = 'Responde en español, de forma directa, concreta y breve. Da la mejor respuesta inmediata sin repetir la pregunta, sin añadir prefijos como "Assistant:" ni recapitulaciones. Evita sermones, evita preguntas de reflexión, y entrega solo la información necesaria para resolver la consulta.';
-      // Excluir el saludo inicial sembrado por la UI y limitar el historial
+      // Si pide explícitamente la respuesta, respondemos localmente con guía y evitamos la llamada
+      if (mode === 'coach' && shouldRefuseDirectAnswer(userMessage.content)) {
+        const guided: Message = {
+          id: nextMessages.length + 1,
+          sender: 'ai',
+          content: 'No puedo darte la respuesta directa, pero puedo guiarte. Empecemos con 3 preguntas y un plan breve:',
+          type: 'question',
+          questions: [
+            '¿Qué te pide exactamente la consigna y qué dato clave ya tienes?',
+            '¿Qué estrategia o fórmula se ajusta mejor a ese tipo de problema?',
+            '¿Qué suposición podrías comprobar primero con un ejemplo pequeño?'
+          ],
+        };
+        setMessages([...nextMessages, guided]);
+        await sendInsightPing(userMessage.content, guided.content);
+        return;
+      }
+
+      // Construye el historial (excluye saludo inicial) y limita a las 10 últimas interacciones
       const conversation = nextMessages
         .filter((m, idx) => !(idx === 0 && m.sender === 'ai'))
         .slice(-10);
 
       const payload = {
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: buildSystemPrompt(mode) },
           ...conversation.map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content }))
         ]
       };
@@ -79,13 +164,18 @@ export function StudentChat({ onNavigate }: StudentChatProps) {
       }
 
       const data = await res.json();
+      const aiText = data.content || 'Lo siento, no pude generar una respuesta ahora.';
+
       const aiMessage: Message = {
         id: nextMessages.length + 1,
         sender: 'ai',
-        content: data.content || 'Lo siento, no pude generar una respuesta ahora.',
+        content: aiText,
         type: 'message'
       };
+
       setMessages([...nextMessages, aiMessage]);
+      await sendInsightPing(userMessage.content, aiText);
+
     } catch (e) {
       const aiMessage: Message = {
         id: nextMessages.length + 1,
@@ -94,10 +184,12 @@ export function StudentChat({ onNavigate }: StudentChatProps) {
         type: 'message'
       };
       setMessages([...nextMessages, aiMessage]);
+      await sendInsightPing(userMessage.content, '');
+
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -124,9 +216,31 @@ export function StudentChat({ onNavigate }: StudentChatProps) {
               <span className="text-blue-600">Asistente IA de Pensamiento Crítico</span>
             </div>
           </div>
-          <Badge className="bg-green-100 text-green-700">
-            <Sparkles className="w-3 h-3 mr-1" /> En línea
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge className="bg-green-100 text-green-700">
+              <Sparkles className="w-3 h-3 mr-1" /> En línea
+            </Badge>
+            {/* Toggle de modo */}
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-600 hidden sm:inline">Modo:</span>
+              <Button
+                variant={mode === 'coach' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMode('coach')}
+                className={mode === 'coach' ? '' : 'bg-white'}
+              >
+                Guía
+              </Button>
+              <Button
+                variant={mode === 'direct' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMode('direct')}
+                className={mode === 'direct' ? '' : 'bg-white'}
+              >
+                Directo
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -245,7 +359,7 @@ export function StudentChat({ onNavigate }: StudentChatProps) {
                         </div>
                       )}
                       <p className="text-sm leading-relaxed">{msg.content}</p>
-                      
+
                       {msg.type === 'question' && msg.questions && (
                         <div className="mt-4 space-y-2">
                           {msg.questions.map((question, index) => (
@@ -265,19 +379,19 @@ export function StudentChat({ onNavigate }: StudentChatProps) {
 
               {/* Input Area */}
               <div className="border-t p-4">
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Escribe tu pregunta o reflexión aquí..."
+                    placeholder={mode === 'coach' ? "Plantea tu duda y te guiaré paso a paso..." : "Escribe tu pregunta..."}
                     className="flex-1"
                   />
                   <Button onClick={handleSendMessage} className="gap-2" disabled={loading}>
                     <Send className="w-4 h-4" /> {loading ? 'Enviando...' : 'Enviar'}
                   </Button>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2 items-center">
                   <span className="text-sm text-gray-600">Preguntas rápidas:</span>
                   <Button
                     variant="outline"

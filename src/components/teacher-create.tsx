@@ -48,6 +48,16 @@ type ActivityResult = {
     actividades: string[];
     recursos: string[];
   }>;
+  // 👇 NUEVO: variaciones por estudiante (Agent2Agent)
+  por_estudiante?: Array<{
+    studentId: string;
+    nombre: string;
+    modalidad: Modality;
+    nivel: "basico" | "intermedio" | "avanzado";
+    objetivos_personalizados: string[];
+    pasos_personalizados: Array<{ titulo: string; descripcion: string }>;
+    recursos: string[];
+  }>;
 };
 
 export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
@@ -144,7 +154,7 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       activities: [
         "Experimento: medir huella de carbono personal",
         "Proyecto: plan de sostenibilidad escolar",
-        "Role‑play: simular una cumbre climática"
+        "Role-play: simular una cumbre climática"
       ],
       resources: ["Calculadoras de huella", "Kits de experimentos", "Materiales reciclados"]
     }
@@ -186,6 +196,39 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       } else {
         setActivityResult(data);
         setStep("generated");
+
+        // 🔧 MOCK TEMPORAL: si el backend aún no retorna por_estudiante, inyecta dos ejemplos
+        if (!data.por_estudiante || data.por_estudiante.length === 0) {
+          setActivityResult((prev) => ({
+            ...prev,
+            por_estudiante: [
+              {
+                studentId: "s1",
+                nombre: "Ana",
+                modalidad: "visual",
+                nivel: "intermedio",
+                objetivos_personalizados: ["Mejorar síntesis", "Justificar con datos"],
+                pasos_personalizados: [
+                  { titulo: "Mapa conceptual", descripcion: "Organiza causas/efectos con conectores." },
+                  { titulo: "Tabla de evidencias", descripcion: "Fuente, dato, relevancia." }
+                ],
+                recursos: ["Infografías", "Plantilla de mapa", "Rúbrica"]
+              },
+              {
+                studentId: "s2",
+                nombre: "Luis",
+                modalidad: "auditory",
+                nivel: "basico",
+                objetivos_personalizados: ["Identificar contraargumentos"],
+                pasos_personalizados: [
+                  { titulo: "Debate guiado", descripcion: "A-B con turnos de 1 min." },
+                  { titulo: "Registro oral", descripcion: "Graba un resumen de 60s." }
+                ],
+                recursos: ["Podcast corto", "Plantilla de debate"]
+              }
+            ]
+          }));
+        }
       }
     } catch (err: any) {
       setActivityResult({ error: err?.message || "Error inesperado" });
@@ -376,19 +419,23 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       resources: string[];
     }> = [];
 
-    tabsToShow.forEach((mod) => {
+    const tabs = (learningProfile === "mixed")
+      ? ["visual", "auditory", "reading", "kinesthetic"]
+      : [learningProfile];
+
+    tabs.forEach((mod) => {
       const server = activityResult?.adaptaciones?.[mod as Exclude<Modality, "mixed">];
       const fallback = defaultAdaptations[mod as Exclude<Modality, "mixed">];
       out.push({
         type: mod as Exclude<Modality, "mixed">,
-        title: server ? fallback.title : fallback.title,
-        description: server ? fallback.description : fallback.description,
+        title: fallback.title,
+        description: fallback.description,
         activities: server?.actividades || fallback.activities,
         resources: server?.recursos || fallback.resources,
       });
     });
     return out;
-  }, [activityResult?.adaptaciones, tabsToShow]);
+  }, [activityResult?.adaptaciones, learningProfile]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -535,10 +582,12 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                       <Icon className={`w-6 h-6 ${colors.fg}`} />
                     </div>
                     <div>
-                      <h3 className="text-xl text-gray-900">{adapt.type === "reading" ? "Lectura/Escritura" : adapt.type === "auditory" ? "Adaptación Auditiva" : adapt.type === "visual" ? "Adaptación Visual" : "Adaptación Kinestésica"}</h3>
-                      <p className="text-sm text-gray-600">{
-                        defaultAdaptations[adapt.type].description
-                      }</p>
+                      <h3 className="text-xl text-gray-900">
+                        {adapt.type === "reading" ? "Lectura/Escritura" :
+                         adapt.type === "auditory" ? "Adaptación Auditiva" :
+                         adapt.type === "visual" ? "Adaptación Visual" : "Adaptación Kinestésica"}
+                      </h3>
+                      <p className="text-sm text-gray-600">{defaultAdaptations[adapt.type].description}</p>
                     </div>
                   </div>
 
@@ -569,6 +618,61 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
             );
           })}
         </Tabs>
+
+        {/* Variaciones personalizadas por estudiante */}
+        {activityResult?.por_estudiante && activityResult.por_estudiante.length > 0 ? (
+          <Card className="p-8 mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-5 h-5 text-blue-600" />
+              <h2 className="text-2xl text-gray-900">Variaciones personalizadas por estudiante</h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {activityResult.por_estudiante.map((p) => (
+                <Card key={p.studentId} className="p-4 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold">{p.nombre}</div>
+                      <div className="text-xs text-gray-500">
+                        Estilo: {p.modalidad === "reading" ? "Lectura/Escritura" : p.modalidad} · Nivel: {p.nivel}
+                      </div>
+                    </div>
+                    <Badge variant="outline">Plan individual</Badge>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="text-sm text-gray-900 mb-1">Objetivos personalizados</div>
+                    <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                      {p.objetivos_personalizados.map((o, idx) => <li key={idx}>{o}</li>)}
+                    </ul>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="text-sm text-gray-900 mb-1">Pasos sugeridos</div>
+                    <ol className="list-decimal pl-5 text-sm text-gray-700 space-y-1">
+                      {p.pasos_personalizados.map((s, idx) => (
+                        <li key={idx}><span className="font-medium">{s.titulo}:</span> {s.descripcion}</li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="text-sm text-gray-900 mb-1">Recursos</div>
+                    <div className="flex flex-wrap gap-2">
+                      {p.recursos.map((r, idx) => <Badge key={idx} variant="outline">{r}</Badge>)}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-6 mb-8 bg-gray-50 border-dashed">
+            <div className="text-sm text-gray-600">
+              Aún no hay variaciones por estudiante. Genera la actividad o verifica que el backend devuelva <code>por_estudiante</code>.
+            </div>
+          </Card>
+        )}
 
         {/* Acciones */}
         <Card className="p-6 bg-blue-50 border-blue-200">
