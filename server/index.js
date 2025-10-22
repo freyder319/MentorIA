@@ -354,6 +354,17 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Simple analytics stub to accept student chat insights
+app.post('/api/insights', async (req, res) => {
+  try {
+    // In a future iteration, store in DB or forward to analytics pipeline
+    const payload = req.body || {};
+    return res.status(200).json({ ok: true, received: payload });
+  } catch (e) {
+    return res.status(500).json({ ok: false });
+  }
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' });
 });
