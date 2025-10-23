@@ -6,11 +6,6 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const { fetch } = require("undici");
 const path = require("path");
-const {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-  ConverseCommand,
-} = require("@aws-sdk/client-bedrock-runtime");
 const { createClient } = require("@supabase/supabase-js");
 const MCP = require("./mcp");
 const A2AAgent = require("./a2a-agent");
@@ -344,14 +339,8 @@ app.post("/api/chat", async (req, res) => {
       return res.json({ content: response });
     }
 
-    if ((process.env.PROVIDER || "openai") === "bedrock") {
-      const region = process.env.AWS_REGION || "us-east-1";
-      const modelId =
-        process.env.BEDROCK_MODEL_ID ||
-        "anthropic.claude-3-5-sonnet-20241022-v1:0";
-
-      // Sistema socrático para MentorIA
-      const systemPrompt = `Eres MentorIA, un asistente educativo especializado en desarrollar pensamiento crítico y análisis de argumentos.
+    // Sistema socrático para MentorIA
+    const systemPrompt = `Eres MentorIA, un asistente educativo especializado en desarrollar pensamiento crítico y análisis de argumentos.
 
 REGLAS FUNDAMENTALES:
 1. SIEMPRE responde la pregunta del estudiante de manera educativa y útil.
@@ -369,129 +358,13 @@ EJEMPLOS DE RESPUESTAS CORRECTAS:
 
 OBJETIVO: Educar y desarrollar pensamiento independiente y crítico en el estudiante.`;
 
-      const systemMsg =
-        messages.find((m) => m.role === "system")?.content || systemPrompt;
-      const nonSystem = messages.filter((m) => m.role !== "system");
+    // Ensure system message is present
+    const systemMsg = messages.find((m) => m.role === "system")?.content || systemPrompt;
+    const messagesWithSystem = messages.some(m => m.role === "system") 
+      ? messages 
+      : [{ role: "system", content: systemPrompt }, ...messages];
 
-      const client = new BedrockRuntimeClient({ region });
-
-      // Use Converse API for AI21 Jamba models
-      if (modelId.startsWith("ai21.")) {
-        const convMessages = [];
-        if (systemMsg) {
-          convMessages.push({ role: "system", content: [{ text: systemMsg }] });
-        }
-        for (const m of nonSystem) {
-          const role = m.role === "assistant" ? "assistant" : "user";
-          convMessages.push({ role, content: [{ text: m.content }] });
-        }
-        try {
-          const command = new ConverseCommand({
-            modelId,
-            messages: convMessages,
-            inferenceConfig: { maxTokens: 512, temperature: 0.7 },
-          });
-          const response = await client.send(command);
-          const content = response?.output?.message?.content?.[0]?.text || "";
-          return res.json({ content });
-        } catch (e) {
-          console.error("[CHAT][Upstream error]", {
-            provider: "bedrock",
-            api: "converse",
-            modelId,
-            region,
-            details: String(e),
-          });
-          return res
-            .status(502)
-            .json({ error: "Upstream error", details: String(e) });
-        }
-      }
-
-      // Use Titan Text schema for Amazon Titan models
-      if (modelId.startsWith("amazon.titan-")) {
-        // Build a single prompt by concatenating conversation
-        // You can customize this prompt template as needed
-        const parts = [];
-        if (systemMsg) parts.push(`System: ${systemMsg}`);
-        for (const m of nonSystem) {
-          const role = m.role === "assistant" ? "Assistant" : "User";
-          parts.push(`${role}: ${m.content}`);
-        }
-        parts.push("Assistant:");
-        const inputText = parts.join("\n");
-
-        const titanBody = {
-          inputText,
-          textGenerationConfig: {
-            temperature: 0.7,
-            maxTokenCount: 512,
-            topP: 0.9,
-            stopSequences: [],
-          },
-        };
-
-        try {
-          const command = new InvokeModelCommand({
-            modelId,
-            contentType: "application/json",
-            accept: "application/json",
-            body: JSON.stringify(titanBody),
-          });
-          const response = await client.send(command);
-          const json = JSON.parse(new TextDecoder().decode(response.body));
-          const content = json?.results?.[0]?.outputText || "";
-          return res.json({ content });
-        } catch (e) {
-          console.error("[CHAT][Upstream error]", {
-            provider: "bedrock",
-            api: "invoke",
-            modelId,
-            region,
-            details: String(e),
-          });
-          return res
-            .status(502)
-            .json({ error: "Upstream error", details: String(e) });
-        }
-      }
-
-      // Default to Anthropic Claude schema for other Bedrock models
-      const convo = nonSystem.map((m) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: [{ type: "text", text: m.content }],
-      }));
-      const body = {
-        anthropic_version: "bedrock-2023-05-31",
-        max_tokens: 512,
-        temperature: 0.7,
-        system: systemMsg,
-        messages: convo,
-      };
-
-      try {
-        const command = new InvokeModelCommand({
-          modelId,
-          contentType: "application/json",
-          accept: "application/json",
-          body: JSON.stringify(body),
-        });
-        const response = await client.send(command);
-        const json = JSON.parse(new TextDecoder().decode(response.body));
-        const content = json?.content?.[0]?.text || "";
-        return res.json({ content });
-      } catch (e) {
-        console.error("[CHAT][Upstream error]", {
-          provider: "bedrock",
-          modelId,
-          region,
-          details: String(e),
-        });
-        return res
-          .status(502)
-          .json({ error: "Upstream error", details: String(e) });
-      }
-    } else {
+    // Use OpenAI API
       const apiKey = process.env.OPENAI_API_KEY;
       const baseUrl =
         process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
@@ -518,7 +391,7 @@ OBJETIVO: Educar y desarrollar pensamiento independiente y crítico en el estudi
         headers,
         body: JSON.stringify({
           model,
-          messages,
+          messages: messagesWithSystem,
           temperature: 0.7,
         }),
       });
@@ -539,14 +412,12 @@ OBJETIVO: Educar y desarrollar pensamiento independiente y crítico en el estudi
       const data = await response.json();
       const content = data?.choices?.[0]?.message?.content || "";
       return res.json({ content });
-    }
   } catch (err) {
     console.error("Chat error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Enhanced analytics endpoint with A2A agent integration
 app.post("/api/insights", async (req, res) => {
   try {
     const payload = req.body || {};

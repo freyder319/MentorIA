@@ -98,6 +98,81 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
   const [learningProfile, setLearningProfile] = useState<Modality>("mixed");
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Función para generar pasos dinámicos basados en el tema
+  const generateDynamicSteps = (topic: string, objective: string) => {
+    const topicLower = topic.toLowerCase();
+    
+    // Pasos genéricos que se adaptan al tema
+    const steps = [
+      {
+        titulo: `Análisis inicial sobre ${topic}`,
+        descripcion: `Identificar los aspectos principales y controversias relacionadas con ${topic}`,
+      },
+      {
+        titulo: "Desarrollo de argumentos",
+        descripcion: `Construir argumentos sólidos sobre ${topic} con evidencia específica del tema`,
+      },
+      {
+        titulo: "Evaluación crítica",
+        descripcion: `Analizar diferentes perspectivas sobre ${topic} y evaluar su validez`,
+      },
+    ];
+
+    // Adaptaciones específicas por tema
+    if (topicLower.includes("fútbol") || topicLower.includes("futbol") || topicLower.includes("deporte")) {
+      return [
+        {
+          titulo: "Análisis del deporte",
+          descripcion: "Analizar aspectos técnicos, tácticos y estratégicos del fútbol",
+        },
+        {
+          titulo: "Historia y evolución",
+          descripcion: "Investigar la evolución del fútbol y su impacto social",
+        },
+        {
+          titulo: "Debate sobre controversias",
+          descripcion: "Discutir temas polémicos como VAR, transferencias, o violencia en el fútbol",
+        },
+      ];
+    }
+
+    if (topicLower.includes("ciencia") || topicLower.includes("tecnología")) {
+      return [
+        {
+          titulo: "Fundamentos científicos",
+          descripcion: `Explicar los principios científicos básicos relacionados con ${topic}`,
+        },
+        {
+          titulo: "Aplicaciones prácticas",
+          descripcion: `Identificar aplicaciones reales de ${topic} en la vida cotidiana`,
+        },
+        {
+          titulo: "Implicaciones éticas",
+          descripcion: `Analizar las implicaciones éticas y sociales de ${topic}`,
+        },
+      ];
+    }
+
+    if (topicLower.includes("historia") || topicLower.includes("histórico")) {
+      return [
+        {
+          titulo: "Contexto histórico",
+          descripcion: `Situar ${topic} en su contexto histórico y cultural`,
+        },
+        {
+          titulo: "Causas y consecuencias",
+          descripcion: `Analizar las causas que llevaron a ${topic} y sus consecuencias`,
+        },
+        {
+          titulo: "Relevancia actual",
+          descripcion: `Evaluar la relevancia de ${topic} en el mundo actual`,
+        },
+      ];
+    }
+
+    return steps;
+  };
+
   // Carga automática del perfil del grupo al pegar id_clase
   useEffect(() => {
     const fetchProfile = async () => {
@@ -148,52 +223,60 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       description:
         "Para estudiantes que aprenden mejor con imágenes y diagramas",
       activities: [
-        "Crear un mapa conceptual sobre las causas del cambio climático",
-        "Analizar infografías comparativas de emisiones de CO2",
-        "Diseñar una línea de tiempo visual de eventos climáticos",
+        `Crear un mapa conceptual sobre ${formData.topic || "el tema"}`,
+        `Analizar infografías relacionadas con ${formData.topic || "el tema"}`,
+        `Diseñar una línea de tiempo visual sobre ${formData.topic || "el tema"}`,
       ],
       resources: [
         "Diagramas de flujo",
         "Gráficos interactivos",
         "Videos educativos",
+        `Imágenes relacionadas con ${formData.topic || "el tema"}`,
       ],
     },
     auditory: {
       title: "Adaptación Auditiva",
       description: "Para estudiantes que aprenden mejor escuchando",
       activities: [
-        "Participar en debate sobre políticas climáticas",
-        "Escuchar un podcast y resumir puntos clave",
-        "Exposición oral defendiendo una solución",
+        `Participar en debate sobre ${formData.topic || "el tema"}`,
+        `Escuchar un podcast sobre ${formData.topic || "el tema"} y resumir puntos clave`,
+        `Exposición oral defendiendo una posición sobre ${formData.topic || "el tema"}`,
       ],
       resources: [
         "Podcasts educativos",
         "Debates grabados",
         "Entrevistas a expertos",
+        `Audio contenido sobre ${formData.topic || "el tema"}`,
       ],
     },
     reading: {
       title: "Lectura/Escritura",
       description: "Para quienes procesan mejor leyendo y redactando",
       activities: [
-        "Redactar un ensayo breve con tesis y 3 evidencias",
-        "Fichar 2 artículos y comparar argumentos",
-        "Elaborar glosario con términos clave",
+        `Redactar un ensayo breve sobre ${formData.topic || "el tema"} con tesis y evidencias`,
+        `Fichar 2 artículos sobre ${formData.topic || "el tema"} y comparar argumentos`,
+        `Elaborar glosario con términos clave de ${formData.topic || "el tema"}`,
       ],
-      resources: ["Artículos académicos", "Reportes", "Guías de estilo"],
+      resources: [
+        "Artículos académicos", 
+        "Reportes", 
+        "Guías de estilo",
+        `Bibliografía sobre ${formData.topic || "el tema"}`,
+      ],
     },
     kinesthetic: {
       title: "Adaptación Kinestésica",
       description: "Para estudiantes que aprenden haciendo",
       activities: [
-        "Experimento: medir huella de carbono personal",
-        "Proyecto: plan de sostenibilidad escolar",
-        "Role-play: simular una cumbre climática",
+        `Experimento práctico relacionado con ${formData.topic || "el tema"}`,
+        `Proyecto: crear algo tangible sobre ${formData.topic || "el tema"}`,
+        `Role-play: simular una situación relacionada con ${formData.topic || "el tema"}`,
       ],
       resources: [
-        "Calculadoras de huella",
+        "Materiales de construcción",
         "Kits de experimentos",
-        "Materiales reciclados",
+        "Herramientas de modelado",
+        `Recursos prácticos para ${formData.topic || "el tema"}`,
       ],
     },
   };
@@ -242,32 +325,19 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
         // Transform the response to match the expected format
         const transformedResult: ActivityResult = {
           activity: { id_actividad: `activity_${Date.now()}` },
-          stats: { estudiantes: 0, planes_creados: 0 },
+          stats: { 
+            estudiantes: groupProfile?.total || 0, 
+            planes_creados: groupProfile?.total || 0 
+          },
           por_estilo: {
-            visual: { estudiantes: 0 },
-            auditory: { estudiantes: 0 },
-            reading: { estudiantes: 0 },
-            kinesthetic: { estudiantes: 0 },
+            visual: { estudiantes: groupProfile?.counts.visual || 0 },
+            auditory: { estudiantes: groupProfile?.counts.auditory || 0 },
+            reading: { estudiantes: groupProfile?.counts.reading || 0 },
+            kinesthetic: { estudiantes: groupProfile?.counts.kinesthetic || 0 },
           },
           base: {
             objetivo: data.activity?.title || formData.objective,
-            pasos: data.activity?.steps || [
-              {
-                titulo: "Tesis principal",
-                descripcion:
-                  "Formular una tesis clara sobre la postura del equipo",
-              },
-              {
-                titulo: "Razones y evidencias",
-                descripcion:
-                  "Aportar al menos 3 razones con fuentes confiables",
-              },
-              {
-                titulo: "Contraargumentos",
-                descripcion:
-                  "Anticipar objeciones y responder de forma fundamentada",
-              },
-            ],
+            pasos: data.activity?.steps || generateDynamicSteps(formData.topic, formData.objective),
           },
           adaptaciones: data.adaptations || {},
           por_estudiante: [],
@@ -281,49 +351,49 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
           !transformedResult.por_estudiante ||
           transformedResult.por_estudiante.length === 0
         ) {
+          // Generate realistic student variations based on group profile
+          const mockStudents = [];
+          const studentNames = ["Ana", "Luis", "María", "Carlos", "Sofia", "Diego"];
+          const modalities = ["visual", "auditory", "reading", "kinesthetic"] as const;
+          
+          // Create students based on actual group distribution
+          if (groupProfile) {
+            Object.entries(groupProfile.counts).forEach(([modality, count]) => {
+              for (let i = 0; i < Math.min(count, 2); i++) { // Max 2 per modality
+                const studentName = studentNames[mockStudents.length % studentNames.length];
+                mockStudents.push({
+                  studentId: `s${mockStudents.length + 1}`,
+                  nombre: studentName,
+                  modalidad: modality as Modality,
+                  nivel: i === 0 ? "intermedio" : "basico" as "basico" | "intermedio" | "avanzado",
+                  objetivos_personalizados: [
+                    `Mejorar comprensión de ${formData.topic}`,
+                    `Desarrollar análisis crítico sobre ${formData.topic}`,
+                  ],
+                  pasos_personalizados: generateDynamicSteps(formData.topic, formData.objective).slice(0, 2),
+                  recursos: [`Recursos específicos de ${formData.topic}`, "Material de apoyo", "Guías de estudio"],
+                });
+              }
+            });
+          } else {
+            // Fallback if no group profile
+            mockStudents.push({
+              studentId: "s1",
+              nombre: "Ana",
+              modalidad: "visual" as Modality,
+              nivel: "intermedio" as "basico" | "intermedio" | "avanzado",
+              objetivos_personalizados: [
+                `Mejorar comprensión de ${formData.topic}`,
+                `Desarrollar análisis crítico sobre ${formData.topic}`,
+              ],
+              pasos_personalizados: generateDynamicSteps(formData.topic, formData.objective).slice(0, 2),
+              recursos: [`Recursos específicos de ${formData.topic}`, "Material de apoyo"],
+            });
+          }
+
           setActivityResult((prev) => ({
             ...prev,
-            por_estudiante: [
-              {
-                studentId: "s1",
-                nombre: "Ana",
-                modalidad: "visual",
-                nivel: "intermedio",
-                objetivos_personalizados: [
-                  "Mejorar síntesis",
-                  "Justificar con datos",
-                ],
-                pasos_personalizados: [
-                  {
-                    titulo: "Mapa conceptual",
-                    descripcion: "Organiza causas/efectos con conectores.",
-                  },
-                  {
-                    titulo: "Tabla de evidencias",
-                    descripcion: "Fuente, dato, relevancia.",
-                  },
-                ],
-                recursos: ["Infografías", "Plantilla de mapa", "Rúbrica"],
-              },
-              {
-                studentId: "s2",
-                nombre: "Luis",
-                modalidad: "auditory",
-                nivel: "basico",
-                objetivos_personalizados: ["Identificar contraargumentos"],
-                pasos_personalizados: [
-                  {
-                    titulo: "Debate guiado",
-                    descripcion: "A-B con turnos de 1 min.",
-                  },
-                  {
-                    titulo: "Registro oral",
-                    descripcion: "Graba un resumen de 60s.",
-                  },
-                ],
-                recursos: ["Podcast corto", "Plantilla de debate"],
-              },
-            ],
+            por_estudiante: mockStudents,
           }));
         }
       }

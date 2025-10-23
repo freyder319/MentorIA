@@ -72,17 +72,12 @@ SUPABASE_SERVICE_ROLE=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 VITE_SUPABASE_URL=https://catccvmyffumdnqcymxk.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdGNjdm15ZmZ1bWRucWN5bXhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwOTcyOTQsImV4cCI6MjA3NjY3MzI5NH0.W0aqtdZizL1Yt1f4aIa0Gb_Fbi9nj2dABAgdso8Ox88
 
-# Inteligencia Artificial (Elegir una opción)
+# Inteligencia Artificial (OpenAI)
 
-# Opción A: AWS Bedrock (Recomendado - más económico)
-PROVIDER=bedrock
-AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=amazon.titan-text-lite-v1
-
-# Opción B: OpenAI (Alternativo - requiere API key)
-# PROVIDER=openai
-# OPENAI_API_KEY=sk-tu_clave_aqui
-# OPENAI_MODEL=gpt-4o-mini
+# OpenAI Configuration
+PROVIDER=openai
+OPENAI_API_KEY=sk-tu_clave_aqui
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 ### 5. Ejecutar la aplicación

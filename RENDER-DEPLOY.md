@@ -22,14 +22,10 @@ Configurar en Render Dashboard:
 PORT=4000
 NODE_ENV=production
 
-# LLM (Elegir uno)
-PROVIDER=bedrock
-AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=amazon.titan-text-lite-v1
-
-# O OpenAI
-# PROVIDER=openai
-# OPENAI_API_KEY=sk-your_key
+# LLM Configuration
+PROVIDER=openai
+OPENAI_API_KEY=sk-your_key
+OPENAI_MODEL=gpt-4o-mini
 
 # Supabase
 SUPABASE_URL=https://catccvmyffumdnqcymxk.supabase.co
@@ -61,4 +57,4 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 - **Build Error**: Verificar Node.js version (18+)
 - **Runtime Error**: Verificar variables de entorno
 - **Database Error**: Verificar conexión Supabase
-- **LLM Error**: Verificar credenciales AWS/OpenAI
+- **LLM Error**: Verificar credenciales OpenAI
