@@ -1,10 +1,16 @@
-import { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { Badge } from "./ui/badge";
 import {
   Brain,
@@ -18,7 +24,7 @@ import {
   Send,
   CheckCircle2,
   Lightbulb,
-  Book
+  Book,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
@@ -44,10 +50,13 @@ type ActivityResult = {
     objetivo?: string;
     pasos?: Array<{ titulo: string; descripcion: string }>;
   };
-  adaptaciones?: Record<Modality, {
-    actividades: string[];
-    recursos: string[];
-  }>;
+  adaptaciones?: Record<
+    Modality,
+    {
+      actividades: string[];
+      recursos: string[];
+    }
+  >;
   // 👇 NUEVO: variaciones por estudiante (Agent2Agent)
   por_estudiante?: Array<{
     studentId: string;
@@ -61,23 +70,33 @@ type ActivityResult = {
 };
 
 export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
-  const [step, setStep] = useState<'form' | 'generated'>("form");
+  const [step, setStep] = useState<"form" | "generated">("form");
   const [formData, setFormData] = useState({
     topic: "",
     objective: "",
     level: "",
     duration: "",
-    context: ""
+    context: "",
+    learningStyles: [] as string[],
+    inclusionNeeds: "",
+    complexity: "media",
   });
-  const [classId, setClassId] = useState("");
-  const [activityResult, setActivityResult] = useState<ActivityResult | null>(null);
+  const [classId, setClassId] = useState<string>("");
+  const [activityResult, setActivityResult] = useState<ActivityResult | null>(
+    null
+  );
   const [groupProfile, setGroupProfile] = useState<{
     total: number;
-    counts: { visual: number; auditory: number; reading: number; kinesthetic: number };
-    dominant: 'visual'|'auditory'|'reading'|'kinesthetic'|'mixed';
+    counts: {
+      visual: number;
+      auditory: number;
+      reading: number;
+      kinesthetic: number;
+    };
+    dominant: "visual" | "auditory" | "reading" | "kinesthetic" | "mixed";
   } | null>(null);
   const [learningProfile, setLearningProfile] = useState<Modality>("mixed");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Carga automática del perfil del grupo al pegar id_clase
   useEffect(() => {
@@ -86,7 +105,7 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       try {
         const res = await fetch(`/api/group-profile?classId=${classId}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || 'Error perfil');
+        if (!res.ok) throw new Error(data?.error || "Error perfil");
         setGroupProfile(data);
         setLearningProfile(data.dominant);
       } catch (e) {
@@ -98,7 +117,10 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
   }, [classId]);
 
   // Mapeo seguro de clases Tailwind (evita strings dinámicos sueltos)
-  const colorByModality: Record<Exclude<Modality, "mixed">, { bg: string; fg: string }> = {
+  const colorByModality: Record<
+    Exclude<Modality, "mixed">,
+    { bg: string; fg: string }
+  > = {
     visual: { bg: "bg-blue-100", fg: "text-blue-600" },
     auditory: { bg: "bg-green-100", fg: "text-green-600" },
     reading: { bg: "bg-amber-100", fg: "text-amber-600" },
@@ -112,21 +134,29 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
     kinesthetic: Hand,
   };
 
-  const defaultAdaptations: Record<Exclude<Modality, "mixed">, {
-    title: string;
-    description: string;
-    activities: string[];
-    resources: string[];
-  }> = {
+  const defaultAdaptations: Record<
+    Exclude<Modality, "mixed">,
+    {
+      title: string;
+      description: string;
+      activities: string[];
+      resources: string[];
+    }
+  > = {
     visual: {
       title: "Adaptación Visual",
-      description: "Para estudiantes que aprenden mejor con imágenes y diagramas",
+      description:
+        "Para estudiantes que aprenden mejor con imágenes y diagramas",
       activities: [
         "Crear un mapa conceptual sobre las causas del cambio climático",
         "Analizar infografías comparativas de emisiones de CO2",
-        "Diseñar una línea de tiempo visual de eventos climáticos"
+        "Diseñar una línea de tiempo visual de eventos climáticos",
       ],
-      resources: ["Diagramas de flujo", "Gráficos interactivos", "Videos educativos"]
+      resources: [
+        "Diagramas de flujo",
+        "Gráficos interactivos",
+        "Videos educativos",
+      ],
     },
     auditory: {
       title: "Adaptación Auditiva",
@@ -134,9 +164,13 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       activities: [
         "Participar en debate sobre políticas climáticas",
         "Escuchar un podcast y resumir puntos clave",
-        "Exposición oral defendiendo una solución"
+        "Exposición oral defendiendo una solución",
       ],
-      resources: ["Podcasts educativos", "Debates grabados", "Entrevistas a expertos"]
+      resources: [
+        "Podcasts educativos",
+        "Debates grabados",
+        "Entrevistas a expertos",
+      ],
     },
     reading: {
       title: "Lectura/Escritura",
@@ -144,9 +178,9 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       activities: [
         "Redactar un ensayo breve con tesis y 3 evidencias",
         "Fichar 2 artículos y comparar argumentos",
-        "Elaborar glosario con términos clave"
+        "Elaborar glosario con términos clave",
       ],
-      resources: ["Artículos académicos", "Reportes", "Guías de estilo"]
+      resources: ["Artículos académicos", "Reportes", "Guías de estilo"],
     },
     kinesthetic: {
       title: "Adaptación Kinestésica",
@@ -154,51 +188,99 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
       activities: [
         "Experimento: medir huella de carbono personal",
         "Proyecto: plan de sostenibilidad escolar",
-        "Role-play: simular una cumbre climática"
+        "Role-play: simular una cumbre climática",
       ],
-      resources: ["Calculadoras de huella", "Kits de experimentos", "Materiales reciclados"]
-    }
+      resources: [
+        "Calculadoras de huella",
+        "Kits de experimentos",
+        "Materiales reciclados",
+      ],
+    },
   };
 
-  const handleGenerate = async (e: React.FormEvent) => {
+  const handleGenerate = async (e: any) => {
     e.preventDefault();
     setActivityResult(null);
     if (loading) return;
     try {
       if (!classId) {
-        setActivityResult({ error: "Debes ingresar el ID de la clase (id_clase)" });
+        setActivityResult({
+          error: "Debes ingresar el ID de la clase (id_clase)",
+        });
         return;
       }
       setLoading(true);
 
-      // Mapeo de campos locales -> backend
+      // Use the new inclusive activity generation endpoint
       const payload = {
-        id_clase: classId,
-        titulo: formData.topic || "Actividad sin título",
-        objetivo: formData.objective || "Objetivo no definido",
-        nivel_taxonomia: formData.level || "analizar",
-        tipo_recurso: "mixto",
-        complejidad: formData.duration || "media",
-        contexto: formData.context || "",
-        // NUEVO: perfil de aprendizaje preferido; si es "mixed" el backend puede decidir según datos del grupo
-        perfil_aprendizaje: learningProfile,
+        topic: formData.topic || "Actividad sin título",
+        objectives: formData.objective || "Objetivo no definido",
+        learningStyles:
+          learningProfile === "mixed"
+            ? ["visual", "auditory", "reading", "kinesthetic"]
+            : [learningProfile],
+        inclusionNeeds: [], // Could be expanded based on form data
+        complexity: formData.duration || "media",
+        sessionId: `teacher_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
       };
 
-      const res = await fetch("/api/activity-agent", {
+      const res = await fetch("/api/generate-inclusive-activity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const data: ActivityResult = await res.json();
+      const data = await res.json();
       if (!res.ok) {
-        setActivityResult({ error: (data as any)?.error || "Error al generar actividad", details: (data as any)?.details });
+        setActivityResult({
+          error: data?.error || "Error al generar actividad",
+          details: data?.details,
+        });
       } else {
-        setActivityResult(data);
+        // Transform the response to match the expected format
+        const transformedResult: ActivityResult = {
+          activity: { id_actividad: `activity_${Date.now()}` },
+          stats: { estudiantes: 0, planes_creados: 0 },
+          por_estilo: {
+            visual: { estudiantes: 0 },
+            auditory: { estudiantes: 0 },
+            reading: { estudiantes: 0 },
+            kinesthetic: { estudiantes: 0 },
+          },
+          base: {
+            objetivo: data.activity?.title || formData.objective,
+            pasos: data.activity?.steps || [
+              {
+                titulo: "Tesis principal",
+                descripcion:
+                  "Formular una tesis clara sobre la postura del equipo",
+              },
+              {
+                titulo: "Razones y evidencias",
+                descripcion:
+                  "Aportar al menos 3 razones con fuentes confiables",
+              },
+              {
+                titulo: "Contraargumentos",
+                descripcion:
+                  "Anticipar objeciones y responder de forma fundamentada",
+              },
+            ],
+          },
+          adaptaciones: data.adaptations || {},
+          por_estudiante: [],
+        };
+
+        setActivityResult(transformedResult);
         setStep("generated");
 
-        // 🔧 MOCK TEMPORAL: si el backend aún no retorna por_estudiante, inyecta dos ejemplos
-        if (!data.por_estudiante || data.por_estudiante.length === 0) {
+        // Add mock student variations if none provided
+        if (
+          !transformedResult.por_estudiante ||
+          transformedResult.por_estudiante.length === 0
+        ) {
           setActivityResult((prev) => ({
             ...prev,
             por_estudiante: [
@@ -207,12 +289,21 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                 nombre: "Ana",
                 modalidad: "visual",
                 nivel: "intermedio",
-                objetivos_personalizados: ["Mejorar síntesis", "Justificar con datos"],
-                pasos_personalizados: [
-                  { titulo: "Mapa conceptual", descripcion: "Organiza causas/efectos con conectores." },
-                  { titulo: "Tabla de evidencias", descripcion: "Fuente, dato, relevancia." }
+                objetivos_personalizados: [
+                  "Mejorar síntesis",
+                  "Justificar con datos",
                 ],
-                recursos: ["Infografías", "Plantilla de mapa", "Rúbrica"]
+                pasos_personalizados: [
+                  {
+                    titulo: "Mapa conceptual",
+                    descripcion: "Organiza causas/efectos con conectores.",
+                  },
+                  {
+                    titulo: "Tabla de evidencias",
+                    descripcion: "Fuente, dato, relevancia.",
+                  },
+                ],
+                recursos: ["Infografías", "Plantilla de mapa", "Rúbrica"],
               },
               {
                 studentId: "s2",
@@ -221,12 +312,18 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                 nivel: "basico",
                 objetivos_personalizados: ["Identificar contraargumentos"],
                 pasos_personalizados: [
-                  { titulo: "Debate guiado", descripcion: "A-B con turnos de 1 min." },
-                  { titulo: "Registro oral", descripcion: "Graba un resumen de 60s." }
+                  {
+                    titulo: "Debate guiado",
+                    descripcion: "A-B con turnos de 1 min.",
+                  },
+                  {
+                    titulo: "Registro oral",
+                    descripcion: "Graba un resumen de 60s.",
+                  },
                 ],
-                recursos: ["Podcast corto", "Plantilla de debate"]
-              }
-            ]
+                recursos: ["Podcast corto", "Plantilla de debate"],
+              },
+            ],
           }));
         }
       }
@@ -238,11 +335,42 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
   };
 
   const tabsToShow: Exclude<Modality, "mixed">[] = useMemo(() => {
-    if (learningProfile === "mixed") return ["visual", "auditory", "reading", "kinesthetic"];
+    if (learningProfile === "mixed")
+      return ["visual", "auditory", "reading", "kinesthetic"];
     return [learningProfile];
   }, [learningProfile]);
 
   const defaultTab = tabsToShow[0];
+
+  // Si el backend regresó adaptaciones, úsalas; si no, recurre a las de defecto
+  const uiAdaptaciones = useMemo(() => {
+    const out: Array<{
+      type: Exclude<Modality, "mixed">;
+      title: string;
+      description: string;
+      activities: string[];
+      resources: string[];
+    }> = [];
+
+    const tabs =
+      learningProfile === "mixed"
+        ? ["visual", "auditory", "reading", "kinesthetic"]
+        : [learningProfile];
+
+    tabs.forEach((mod) => {
+      const server =
+        activityResult?.adaptaciones?.[mod as Exclude<Modality, "mixed">];
+      const fallback = defaultAdaptations[mod as Exclude<Modality, "mixed">];
+      out.push({
+        type: mod as Exclude<Modality, "mixed">,
+        title: fallback.title,
+        description: fallback.description,
+        activities: server?.actividades || fallback.activities,
+        resources: server?.recursos || fallback.resources,
+      });
+    });
+    return out;
+  }, [activityResult?.adaptaciones, learningProfile]);
 
   if (step === "form") {
     return (
@@ -259,7 +387,9 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
               </Button>
               <div className="flex items-center gap-2">
                 <Brain className="w-6 h-6 text-green-600" />
-                <span className="text-green-600">Crear actividad adaptativa</span>
+                <span className="text-green-600">
+                  Crear actividad adaptativa
+                </span>
               </div>
             </div>
           </div>
@@ -267,9 +397,12 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
 
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="mb-8">
-            <h1 className="text-4xl mb-2 text-gray-900">Nueva actividad con IA</h1>
+            <h1 className="text-4xl mb-2 text-gray-900">
+              Nueva actividad con IA
+            </h1>
             <p className="text-xl text-gray-600">
-              La IA generará una actividad base y adaptaciones automáticas según el perfil de aprendizaje.
+              La IA generará una actividad base y adaptaciones automáticas según
+              el perfil de aprendizaje.
             </p>
           </div>
 
@@ -293,7 +426,9 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                   <Input
                     id="topic"
                     value={formData.topic}
-                    onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, topic: e.target.value })
+                    }
                     placeholder="Ej: Cambio climático y sostenibilidad"
                     required
                     className="mt-2"
@@ -305,7 +440,9 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                   <Textarea
                     id="objective"
                     value={formData.objective}
-                    onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, objective: e.target.value })
+                    }
                     placeholder="Ej: Desarrollar pensamiento crítico evaluando causas, consecuencias y soluciones"
                     required
                     className="mt-2 min-h-[100px]"
@@ -315,13 +452,20 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                 <div className="grid md:grid-cols-3 gap-6">
                   <div>
                     <Label htmlFor="level">Nivel educativo *</Label>
-                    <Select value={formData.level} onValueChange={(val) => setFormData({ ...formData, level: val })}>
+                    <Select
+                      value={formData.level}
+                      onValueChange={(val) =>
+                        setFormData({ ...formData, level: val })
+                      }
+                    >
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="Selecciona un nivel" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="secundaria">Secundaria</SelectItem>
-                        <SelectItem value="preparatoria">Preparatoria</SelectItem>
+                        <SelectItem value="preparatoria">
+                          Preparatoria
+                        </SelectItem>
                         <SelectItem value="universidad">Universidad</SelectItem>
                       </SelectContent>
                     </Select>
@@ -329,7 +473,12 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
 
                   <div>
                     <Label htmlFor="duration">Duración estimada *</Label>
-                    <Select value={formData.duration} onValueChange={(val) => setFormData({ ...formData, duration: val })}>
+                    <Select
+                      value={formData.duration}
+                      onValueChange={(val) =>
+                        setFormData({ ...formData, duration: val })
+                      }
+                    >
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="Selecciona duración" />
                       </SelectTrigger>
@@ -344,7 +493,12 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
 
                   <div>
                     <Label htmlFor="profile">Perfil de aprendizaje</Label>
-                    <Select value={learningProfile} onValueChange={(val) => setLearningProfile(val as Modality)}>
+                    <Select
+                      value={learningProfile}
+                      onValueChange={(val) =>
+                        setLearningProfile(val as Modality)
+                      }
+                    >
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="Selecciona perfil" />
                       </SelectTrigger>
@@ -352,11 +506,16 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                         <SelectItem value="mixed">Mixto (auto)</SelectItem>
                         <SelectItem value="visual">Visual</SelectItem>
                         <SelectItem value="auditory">Auditivo</SelectItem>
-                        <SelectItem value="reading">Lectura/Escritura</SelectItem>
+                        <SelectItem value="reading">
+                          Lectura/Escritura
+                        </SelectItem>
                         <SelectItem value="kinesthetic">Kinestésico</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500 mt-1">Si eliges "Mixto", el backend puede decidir según datos del grupo.</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Si eliges "Mixto", el backend puede decidir según datos
+                      del grupo.
+                    </p>
                   </div>
                 </div>
 
@@ -365,7 +524,9 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                   <Textarea
                     id="context"
                     value={formData.context}
-                    onChange={(e) => setFormData({ ...formData, context: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, context: e.target.value })
+                    }
                     placeholder="Recursos disponibles, conocimientos previos, limitaciones, etc."
                     className="mt-2 min-h-[100px]"
                   />
@@ -376,20 +537,32 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                 <div className="flex items-start gap-3">
                   <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
                   <div>
-                    <div className="text-blue-900 mb-2">¿Cómo funciona la generación adaptativa?</div>
+                    <div className="text-blue-900 mb-2">
+                      ¿Cómo funciona la generación adaptativa?
+                    </div>
                     <p className="text-sm text-blue-800">
-                      La IA crea una actividad base y versiones adaptadas al perfil de aprendizaje (visual, auditivo, lectura/escritura o kinestésico).
-                      También puedes dejarlo en modo mixto para que se ajuste a la composición del grupo. Si pegas un ID de clase válido,
-                      detectaremos automáticamente el perfil dominante del grupo y lo usaremos al generar.
+                      La IA crea una actividad base y versiones adaptadas al
+                      perfil de aprendizaje (visual, auditivo, lectura/escritura
+                      o kinestésico). También puedes dejarlo en modo mixto para
+                      que se ajuste a la composición del grupo. Si pegas un ID
+                      de clase válido, detectaremos automáticamente el perfil
+                      dominante del grupo y lo usaremos al generar.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-8 flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => onNavigate("teacher-dashboard")}>Cancelar</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onNavigate("teacher-dashboard")}
+                >
+                  Cancelar
+                </Button>
                 <Button type="submit" className="gap-2" disabled={loading}>
-                  <Sparkles className="w-4 h-4" /> {loading ? "Generando..." : "Generar actividad con IA"}
+                  <Sparkles className="w-4 h-4" />{" "}
+                  {loading ? "Generando..." : "Generar actividad con IA"}
                 </Button>
               </div>
             </form>
@@ -400,49 +573,36 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
   }
 
   // Vista generada
-  const baseObjetivo = activityResult?.base?.objetivo || formData.objective ||
+  const baseObjetivo =
+    activityResult?.base?.objetivo ||
+    formData.objective ||
     "Desarrollar pensamiento crítico sobre el tema seleccionado";
 
   const basePasos = activityResult?.base?.pasos || [
-    { titulo: "Tesis principal", descripcion: "Formular una tesis clara sobre la postura del equipo" },
-    { titulo: "Razones y evidencias", descripcion: "Aportar al menos 3 razones con fuentes confiables" },
-    { titulo: "Contraargumentos", descripcion: "Anticipar objeciones y responder de forma fundamentada" },
+    {
+      titulo: "Tesis principal",
+      descripcion: "Formular una tesis clara sobre la postura del equipo",
+    },
+    {
+      titulo: "Razones y evidencias",
+      descripcion: "Aportar al menos 3 razones con fuentes confiables",
+    },
+    {
+      titulo: "Contraargumentos",
+      descripcion: "Anticipar objeciones y responder de forma fundamentada",
+    },
   ];
-
-  // Si el backend regresó adaptaciones, úsalas; si no, recurre a las de defecto
-  const uiAdaptaciones = useMemo(() => {
-    const out: Array<{
-      type: Exclude<Modality, "mixed">;
-      title: string;
-      description: string;
-      activities: string[];
-      resources: string[];
-    }> = [];
-
-    const tabs = (learningProfile === "mixed")
-      ? ["visual", "auditory", "reading", "kinesthetic"]
-      : [learningProfile];
-
-    tabs.forEach((mod) => {
-      const server = activityResult?.adaptaciones?.[mod as Exclude<Modality, "mixed">];
-      const fallback = defaultAdaptations[mod as Exclude<Modality, "mixed">];
-      out.push({
-        type: mod as Exclude<Modality, "mixed">,
-        title: fallback.title,
-        description: fallback.description,
-        activities: server?.actividades || fallback.activities,
-        resources: server?.recursos || fallback.resources,
-      });
-    });
-    return out;
-  }, [activityResult?.adaptaciones, learningProfile]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => setStep("form")} className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setStep("form")}
+              className="gap-2"
+            >
               <ArrowLeft className="w-4 h-4" /> Editar parámetros
             </Button>
             <div className="flex items-center gap-2">
@@ -451,9 +611,16 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="gap-2"><Download className="w-4 h-4" /> Descargar</Button>
-            <Button variant="outline" className="gap-2"><Save className="w-4 h-4" /> Guardar borrador</Button>
-            <Button className="gap-2" onClick={() => onNavigate("teacher-dashboard")}>
+            <Button variant="outline" className="gap-2">
+              <Download className="w-4 h-4" /> Descargar
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Save className="w-4 h-4" /> Guardar borrador
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={() => onNavigate("teacher-dashboard")}
+            >
               <Send className="w-4 h-4" /> Publicar actividad
             </Button>
           </div>
@@ -462,15 +629,24 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <Badge className="bg-green-100 text-green-700 mb-4">✨ Generado con IA</Badge>
-          <h1 className="text-4xl mb-2 text-gray-900">{formData.topic || "Actividad de pensamiento crítico"}</h1>
-          <p className="text-xl text-gray-600">Actividad base {learningProfile !== "mixed" && 
-            <>
-              + adaptación <span className="font-semibold">{learningProfile}</span>
-            </>
-          }{learningProfile === "mixed" && 
-            <>+ múltiples adaptaciones para diferentes estilos</>
-          }</p>
+          <Badge className="bg-green-100 text-green-700 mb-4">
+            ✨ Generado con IA
+          </Badge>
+          <h1 className="text-4xl mb-2 text-gray-900">
+            {formData.topic || "Actividad de pensamiento crítico"}
+          </h1>
+          <p className="text-xl text-gray-600">
+            Actividad base{" "}
+            {learningProfile !== "mixed" && (
+              <>
+                + adaptación{" "}
+                <span className="font-semibold">{learningProfile}</span>
+              </>
+            )}
+            {learningProfile === "mixed" && (
+              <>+ múltiples adaptaciones para diferentes estilos</>
+            )}
+          </p>
         </div>
 
         {activityResult && (
@@ -479,20 +655,34 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
               <div className="text-red-700">
                 {activityResult.error}
                 {activityResult.details && (
-                  <pre className="mt-2 text-xs text-red-800 whitespace-pre-wrap break-words bg-red-50 p-2 rounded">{String(activityResult.details)}</pre>
+                  <pre className="mt-2 text-xs text-red-800 whitespace-pre-wrap break-words bg-red-50 p-2 rounded">
+                    {String(activityResult.details)}
+                  </pre>
                 )}
               </div>
             ) : (
               <div className="space-y-2 text-sm">
                 <div className="flex gap-4 flex-wrap">
-                  <Badge variant="outline">Actividad: {activityResult.activity?.id_actividad || "—"}</Badge>
-                  <Badge variant="outline">Estudiantes: {activityResult.stats?.estudiantes ?? 0}</Badge>
-                  <Badge variant="outline">Planes creados: {activityResult.stats?.planes_creados ?? 0}</Badge>
+                  <Badge variant="outline">
+                    Actividad: {activityResult.activity?.id_actividad || "—"}
+                  </Badge>
+                  <Badge variant="outline">
+                    Estudiantes: {activityResult.stats?.estudiantes ?? 0}
+                  </Badge>
+                  <Badge variant="outline">
+                    Planes creados: {activityResult.stats?.planes_creados ?? 0}
+                  </Badge>
                 </div>
                 {activityResult.por_estilo && (
                   <div className="flex gap-2 flex-wrap">
                     {Object.entries(activityResult.por_estilo).map(([k, v]) => (
-                      <Badge key={k} className="bg-blue-50 text-blue-700" variant="outline">{k}: {(v as any).estudiantes}</Badge>
+                      <Badge
+                        key={k}
+                        className="bg-blue-50 text-blue-700"
+                        variant="outline"
+                      >
+                        {k}: {(v as any).estudiantes}
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -500,14 +690,41 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                 {groupProfile && (
                   <div className="mt-2 space-y-1 text-sm">
                     <div className="flex gap-2 flex-wrap">
-                      <Badge variant="outline">Total: {groupProfile.total}</Badge>
-                      <Badge className="bg-blue-50 text-blue-700" variant="outline">Visual: {groupProfile.counts.visual}</Badge>
-                      <Badge className="bg-green-50 text-green-700" variant="outline">Auditivo: {groupProfile.counts.auditory}</Badge>
-                      <Badge className="bg-amber-50 text-amber-700" variant="outline">Lectura/Escritura: {groupProfile.counts.reading}</Badge>
-                      <Badge className="bg-purple-50 text-purple-700" variant="outline">Kinestésico: {groupProfile.counts.kinesthetic}</Badge>
+                      <Badge variant="outline">
+                        Total: {groupProfile.total}
+                      </Badge>
+                      <Badge
+                        className="bg-blue-50 text-blue-700"
+                        variant="outline"
+                      >
+                        Visual: {groupProfile.counts.visual}
+                      </Badge>
+                      <Badge
+                        className="bg-green-50 text-green-700"
+                        variant="outline"
+                      >
+                        Auditivo: {groupProfile.counts.auditory}
+                      </Badge>
+                      <Badge
+                        className="bg-amber-50 text-amber-700"
+                        variant="outline"
+                      >
+                        Lectura/Escritura: {groupProfile.counts.reading}
+                      </Badge>
+                      <Badge
+                        className="bg-purple-50 text-purple-700"
+                        variant="outline"
+                      >
+                        Kinestésico: {groupProfile.counts.kinesthetic}
+                      </Badge>
                     </div>
                     <div className="text-gray-700">
-                      Perfil dominante: <span className="font-medium">{groupProfile.dominant === 'reading' ? 'Lectura/Escritura' : groupProfile.dominant}</span>
+                      Perfil dominante:{" "}
+                      <span className="font-medium">
+                        {groupProfile.dominant === "reading"
+                          ? "Lectura/Escritura"
+                          : groupProfile.dominant}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -533,8 +750,13 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
               <h3 className="text-gray-900 mb-2">Estructura guiada</h3>
               <div className="space-y-3">
                 {basePasos.map((p, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">{idx + 1}</div>
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                      {idx + 1}
+                    </div>
                     <div>
                       <div className="text-gray-900 mb-1">{p.titulo}</div>
                       <p className="text-sm text-gray-600">{p.descripcion}</p>
@@ -548,11 +770,17 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
 
         {/* Adaptaciones */}
         <div className="mb-6">
-          <h2 className="text-2xl mb-4 text-gray-900">Adaptaciones por estilo de aprendizaje</h2>
+          <h2 className="text-2xl mb-4 text-gray-900">
+            Adaptaciones por estilo de aprendizaje
+          </h2>
         </div>
 
         <Tabs defaultValue={defaultTab} className="mb-8">
-          <TabsList className={`grid w-full ${tabsToShow.length === 1 ? "grid-cols-1" : "grid-cols-4"} mb-6`}>
+          <TabsList
+            className={`grid w-full ${
+              tabsToShow.length === 1 ? "grid-cols-1" : "grid-cols-4"
+            } mb-6`}
+          >
             {tabsToShow.map((type) => {
               const Icon = iconByModality[type];
               const colors = colorByModality[type];
@@ -578,25 +806,38 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
               <TabsContent key={adapt.type} value={adapt.type}>
                 <Card className="p-8">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className={`w-12 h-12 ${colors.bg} rounded-full flex items-center justify-center`}>
+                    <div
+                      className={`w-12 h-12 ${colors.bg} rounded-full flex items-center justify-center`}
+                    >
                       <Icon className={`w-6 h-6 ${colors.fg}`} />
                     </div>
                     <div>
                       <h3 className="text-xl text-gray-900">
-                        {adapt.type === "reading" ? "Lectura/Escritura" :
-                         adapt.type === "auditory" ? "Adaptación Auditiva" :
-                         adapt.type === "visual" ? "Adaptación Visual" : "Adaptación Kinestésica"}
+                        {adapt.type === "reading"
+                          ? "Lectura/Escritura"
+                          : adapt.type === "auditory"
+                          ? "Adaptación Auditiva"
+                          : adapt.type === "visual"
+                          ? "Adaptación Visual"
+                          : "Adaptación Kinestésica"}
                       </h3>
-                      <p className="text-sm text-gray-600">{defaultAdaptations[adapt.type].description}</p>
+                      <p className="text-sm text-gray-600">
+                        {defaultAdaptations[adapt.type].description}
+                      </p>
                     </div>
                   </div>
 
                   <div className="space-y-6">
                     <div>
-                      <h4 className="text-gray-900 mb-3">Actividades sugeridas</h4>
+                      <h4 className="text-gray-900 mb-3">
+                        Actividades sugeridas
+                      </h4>
                       <div className="space-y-2">
                         {adapt.activities.map((activity, index) => (
-                          <div key={index} className="flex items-start gap-2 text-gray-700">
+                          <div
+                            key={index}
+                            className="flex items-start gap-2 text-gray-700"
+                          >
                             <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                             <span>{activity}</span>
                           </div>
@@ -605,10 +846,18 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                     </div>
 
                     <div>
-                      <h4 className="text-gray-900 mb-3">Recursos recomendados</h4>
+                      <h4 className="text-gray-900 mb-3">
+                        Recursos recomendados
+                      </h4>
                       <div className="flex flex-wrap gap-2">
                         {adapt.resources.map((resource, index) => (
-                          <Badge key={index} variant="outline" className="text-sm">{resource}</Badge>
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className="text-sm"
+                          >
+                            {resource}
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -620,11 +869,14 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
         </Tabs>
 
         {/* Variaciones personalizadas por estudiante */}
-        {activityResult?.por_estudiante && activityResult.por_estudiante.length > 0 ? (
+        {activityResult?.por_estudiante &&
+        activityResult.por_estudiante.length > 0 ? (
           <Card className="p-8 mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Brain className="w-5 h-5 text-blue-600" />
-              <h2 className="text-2xl text-gray-900">Variaciones personalizadas por estudiante</h2>
+              <h2 className="text-2xl text-gray-900">
+                Variaciones personalizadas por estudiante
+              </h2>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -634,24 +886,37 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                     <div>
                       <div className="font-semibold">{p.nombre}</div>
                       <div className="text-xs text-gray-500">
-                        Estilo: {p.modalidad === "reading" ? "Lectura/Escritura" : p.modalidad} · Nivel: {p.nivel}
+                        Estilo:{" "}
+                        {p.modalidad === "reading"
+                          ? "Lectura/Escritura"
+                          : p.modalidad}{" "}
+                        · Nivel: {p.nivel}
                       </div>
                     </div>
                     <Badge variant="outline">Plan individual</Badge>
                   </div>
 
                   <div className="mt-3">
-                    <div className="text-sm text-gray-900 mb-1">Objetivos personalizados</div>
+                    <div className="text-sm text-gray-900 mb-1">
+                      Objetivos personalizados
+                    </div>
                     <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
-                      {p.objetivos_personalizados.map((o, idx) => <li key={idx}>{o}</li>)}
+                      {p.objetivos_personalizados.map((o, idx) => (
+                        <li key={idx}>{o}</li>
+                      ))}
                     </ul>
                   </div>
 
                   <div className="mt-3">
-                    <div className="text-sm text-gray-900 mb-1">Pasos sugeridos</div>
+                    <div className="text-sm text-gray-900 mb-1">
+                      Pasos sugeridos
+                    </div>
                     <ol className="list-decimal pl-5 text-sm text-gray-700 space-y-1">
                       {p.pasos_personalizados.map((s, idx) => (
-                        <li key={idx}><span className="font-medium">{s.titulo}:</span> {s.descripcion}</li>
+                        <li key={idx}>
+                          <span className="font-medium">{s.titulo}:</span>{" "}
+                          {s.descripcion}
+                        </li>
                       ))}
                     </ol>
                   </div>
@@ -659,7 +924,11 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
                   <div className="mt-3">
                     <div className="text-sm text-gray-900 mb-1">Recursos</div>
                     <div className="flex flex-wrap gap-2">
-                      {p.recursos.map((r, idx) => <Badge key={idx} variant="outline">{r}</Badge>)}
+                      {p.recursos.map((r, idx) => (
+                        <Badge key={idx} variant="outline">
+                          {r}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
                 </Card>
@@ -669,7 +938,8 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
         ) : (
           <Card className="p-6 mb-8 bg-gray-50 border-dashed">
             <div className="text-sm text-gray-600">
-              Aún no hay variaciones por estudiante. Genera la actividad o verifica que el backend devuelva <code>por_estudiante</code>.
+              Aún no hay variaciones por estudiante. Genera la actividad o
+              verifica que el backend devuelva <code>por_estudiante</code>.
             </div>
           </Card>
         )}
@@ -681,11 +951,23 @@ export function TeacherCreate({ onNavigate }: TeacherCreateProps) {
             <div className="flex-1">
               <div className="text-blue-900 mb-2">Siguiente paso</div>
               <p className="text-sm text-blue-800 mb-4">
-                Revisa las adaptaciones y personalízalas según tu grupo. Puedes editar, descargar o publicar.
+                Revisa las adaptaciones y personalízalas según tu grupo. Puedes
+                editar, descargar o publicar.
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setStep("form")}>Editar parámetros</Button>
-                <Button size="sm" onClick={() => onNavigate("teacher-dashboard")}>Publicar para estudiantes</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStep("form")}
+                >
+                  Editar parámetros
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => onNavigate("teacher-dashboard")}
+                >
+                  Publicar para estudiantes
+                </Button>
               </div>
             </div>
           </div>

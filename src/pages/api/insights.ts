@@ -1,14 +1,38 @@
 // pages/api/insights.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import { addInsight, getInsightsByClass, ChatInsight } from "@/server/insightsRepo";
+import {
+  addInsight,
+  getInsightsByClass,
+  ChatInsight,
+} from "../../../server/insightsRepo";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method === "POST") {
-    const { classId, studentId, modality, level, strengths = [], needs = [], recentTopic, metrics } = req.body || {};
-    if (!classId || !studentId) return res.status(400).json({ error: "classId y studentId requeridos" });
+    const {
+      classId,
+      studentId,
+      modality,
+      level,
+      strengths = [],
+      needs = [],
+      recentTopic,
+      metrics,
+    } = req.body || {};
+    if (!classId || !studentId)
+      return res.status(400).json({ error: "classId y studentId requeridos" });
 
     const created = await addInsight({
-      classId, studentId, modality, level, strengths, needs, recentTopic, metrics
+      classId,
+      studentId,
+      modality,
+      level,
+      strengths,
+      needs,
+      recentTopic,
+      metrics,
     });
     return res.status(201).json({ ok: true, id: created.id });
   }

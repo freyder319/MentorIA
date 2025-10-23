@@ -1,6 +1,13 @@
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Brain, BookOpen, BarChart3, Users, Sparkles, ArrowRight } from "lucide-react";
+import {
+  Brain,
+  BookOpen,
+  BarChart3,
+  Users,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface LandingPageProps {
@@ -18,10 +25,16 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             <span className="text-xl text-blue-600">Mentor-IA Platform</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => onNavigate('login')}>
+            <Button
+              variant="ghost"
+              onClick={() => onNavigate("test-learning-style")}
+            >
+              🧪 Probar IA
+            </Button>
+            <Button variant="ghost" onClick={() => onNavigate("login")}>
               Iniciar sesión
             </Button>
-            <Button onClick={() => onNavigate('register')}>
+            <Button onClick={() => onNavigate("register")}>
               Comenzar gratis
             </Button>
           </div>
@@ -40,10 +53,16 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               Transforma el aprendizaje con inteligencia artificial
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Una plataforma educativa que analiza el pensamiento crítico, ofrece retroalimentación personalizada y adapta las actividades según el estilo de cada estudiante.
+              Una plataforma educativa que analiza el pensamiento crítico,
+              ofrece retroalimentación personalizada y adapta las actividades
+              según el estilo de cada estudiante.
             </p>
             <div className="flex gap-4">
-              <Button size="lg" onClick={() => onNavigate('register')} className="gap-2">
+              <Button
+                size="lg"
+                onClick={() => onNavigate("register")}
+                className="gap-2"
+              >
                 Empezar ahora <ArrowRight className="w-4 h-4" />
               </Button>
               <Button size="lg" variant="outline">
@@ -67,9 +86,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       <section className="bg-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-4xl mb-4 text-gray-900">¿Por qué elegir Mentor-IA?</h2>
+            <h2 className="text-4xl mb-4 text-gray-900">
+              ¿Por qué elegir Mentor-IA?
+            </h2>
             <p className="text-xl text-gray-600">
-              Una plataforma completa para docentes, estudiantes y administradores
+              Una plataforma completa para docentes, estudiantes y
+              administradores
             </p>
           </div>
 
@@ -80,7 +102,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
               <h3 className="text-xl mb-3">Análisis de Pensamiento Crítico</h3>
               <p className="text-gray-600">
-                La IA evalúa y mejora las habilidades de razonamiento mediante retroalimentación reflexiva personalizada.
+                La IA evalúa y mejora las habilidades de razonamiento mediante
+                retroalimentación reflexiva personalizada.
               </p>
             </Card>
 
@@ -90,7 +113,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
               <h3 className="text-xl mb-3">Actividades Adaptativas</h3>
               <p className="text-gray-600">
-                Contenido que se adapta automáticamente a diferentes estilos de aprendizaje: visual, auditivo y kinestésico.
+                Contenido que se adapta automáticamente a diferentes estilos de
+                aprendizaje: visual, auditivo y kinestésico.
               </p>
             </Card>
 
@@ -100,7 +124,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
               <h3 className="text-xl mb-3">Métricas en Tiempo Real</h3>
               <p className="text-gray-600">
-                Visualiza el progreso cognitivo con gráficos detallados y recomendaciones prácticas para mejorar.
+                Visualiza el progreso cognitivo con gráficos detallados y
+                recomendaciones prácticas para mejorar.
               </p>
             </Card>
           </div>
@@ -111,7 +136,9 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-4xl mb-4 text-gray-900">Para cada rol educativo</h2>
+            <h2 className="text-4xl mb-4 text-gray-900">
+              Para cada rol educativo
+            </h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -160,7 +187,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           <p className="text-xl text-blue-100 mb-8">
             Únete a miles de educadores que ya están usando Mentor-IA Platform
           </p>
-          <Button size="lg" variant="secondary" onClick={() => onNavigate('register')} className="gap-2">
+          <Button
+            size="lg"
+            variant="secondary"
+            onClick={() => onNavigate("register")}
+            className="gap-2"
+          >
             Crear cuenta gratuita <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
@@ -173,7 +205,10 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             <Brain className="w-6 h-6 text-blue-400" />
             <span className="text-blue-400">Mentor-IA Platform</span>
           </div>
-          <p>© 2025 Mentor-IA Platform. Transformando la educación con inteligencia artificial.</p>
+          <p>
+            © 2025 Mentor-IA Platform. Transformando la educación con
+            inteligencia artificial.
+          </p>
         </div>
       </footer>
     </div>

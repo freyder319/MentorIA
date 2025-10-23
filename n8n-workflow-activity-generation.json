@@ -1,0 +1,148 @@
+{
+  "name": "MentorIA Activity Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "activity-generation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "activity-generation-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process incoming data\nconst inputData = $input.first().json;\n\n// Validate required fields\nconst requiredFields = ['topic', 'objectives', 'learningStyles'];\nconst missingFields = requiredFields.filter(field => !inputData[field]);\n\nif (missingFields.length > 0) {\n  throw new Error(`Missing required fields: ${missingFields.join(', ')}`);\n}\n\n// Prepare data for AI generation\nconst processedData = {\n  topic: inputData.topic,\n  objectives: inputData.objectives,\n  learningStyles: Array.isArray(inputData.learningStyles) ? inputData.learningStyles : [inputData.learningStyles],\n  inclusionNeeds: inputData.inclusionNeeds || [],\n  complexity: inputData.complexity || 'medium',\n  sessionId: inputData.sessionId || `session_${Date.now()}`,\n  timestamp: new Date().toISOString()\n};\n\nreturn [{ json: processedData }];"
+      },
+      "id": "data-processor",
+      "name": "Data Processor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an expert educational content creator specializing in inclusive learning design. Create engaging, accessible activities that promote critical thinking and accommodate different learning styles."
+            },
+            {
+              "role": "user",
+              "content": "Create an educational activity with the following requirements:\n\nTopic: {{ $json.topic }}\nObjectives: {{ $json.objectives }}\nLearning Styles: {{ $json.learningStyles.join(', ') }}\nInclusion Needs: {{ $json.inclusionNeeds.join(', ') || 'None specified' }}\nComplexity: {{ $json.complexity }}\n\nPlease provide:\n1. A clear activity title\n2. Learning objectives\n3. Step-by-step instructions\n4. Adaptations for each learning style\n5. Inclusion accommodations\n6. Assessment criteria\n7. Required resources\n\nFormat your response as JSON with the following structure:\n{\n  \"title\": \"Activity Title\",\n  \"objectives\": [\"objective1\", \"objective2\"],\n  \"steps\": [{\"title\": \"Step 1\", \"description\": \"Description\"}],\n  \"adaptations\": {\n    \"visual\": {\"activities\": [], \"resources\": [], \"assessment\": \"\"},\n    \"auditory\": {\"activities\": [], \"resources\": [], \"assessment\": \"\"},\n    \"reading\": {\"activities\": [], \"resources\": [], \"assessment\": \"\"},\n    \"kinesthetic\": {\"activities\": [], \"resources\": [], \"assessment\": \"\"}\n  },\n  \"inclusion\": {\n    \"accessibility\": [],\n    \"alternatives\": [],\n    \"accommodations\": []\n  },\n  \"resources\": [],\n  \"assessment\": \"\"\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2000
+        }
+      },
+      "id": "ai-generator",
+      "name": "AI Activity Generator",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and format for frontend\nconst aiResponse = $input.first().json;\nconst originalData = $('Data Processor').first().json;\n\nlet activityData;\ntry {\n  // Try to parse JSON response\n  activityData = JSON.parse(aiResponse.choices[0].message.content);\n} catch (error) {\n  // If parsing fails, create a structured response\n  activityData = {\n    title: originalData.topic,\n    objectives: [originalData.objectives],\n    steps: [\n      { title: \"Introduction\", description: \"Introduce the topic and objectives\" },\n      { title: \"Main Activity\", description: \"Engage students in the core learning activity\" },\n      { title: \"Reflection\", description: \"Reflect on learning and key takeaways\" }\n    ],\n    adaptations: {\n      visual: { activities: [\"Create visual representations\"], resources: [\"Charts\", \"Diagrams\"], assessment: \"Visual presentation\" },\n      auditory: { activities: [\"Group discussions\"], resources: [\"Audio recordings\"], assessment: \"Oral presentation\" },\n      reading: { activities: [\"Written analysis\"], resources: [\"Texts\", \"Articles\"], assessment: \"Written report\" },\n      kinesthetic: { activities: [\"Hands-on activities\"], resources: [\"Manipulatives\"], assessment: \"Practical demonstration\" }\n    },\n    inclusion: {\n      accessibility: [\"Provide alternative formats\"],\n      alternatives: [\"Multiple means of representation\"],\n      accommodations: [\"Extended time\", \"Assistive technology\"]\n    },\n    resources: [\"Basic materials\"],\n    assessment: \"Rubric-based assessment\"\n  };\n}\n\n// Add metadata\nconst response = {\n  success: true,\n  activity: {\n    title: activityData.title,\n    objectives: activityData.objectives,\n    steps: activityData.steps,\n    duration: originalData.complexity === 'low' ? '30 minutes' : originalData.complexity === 'high' ? '2 hours' : '1 hour',\n    complexity: originalData.complexity\n  },\n  adaptations: activityData.adaptations,\n  inclusion: activityData.inclusion,\n  metadata: {\n    generatedAt: originalData.timestamp,\n    sessionId: originalData.sessionId,\n    processingTime: Date.now() - new Date(originalData.timestamp).getTime()\n  }\n};\n\nreturn [{ json: response }];"
+      },
+      "id": "response-formatter",
+      "name": "Response Formatter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": $json.message } }}"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Data Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Processor": {
+      "main": [
+        [
+          {
+            "node": "AI Activity Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Activity Generator": {
+      "main": [
+        [
+          {
+            "node": "Response Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Formatter": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+}
