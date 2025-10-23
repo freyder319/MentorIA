@@ -3,8 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import {
   getInsightsByClass,
   getRosterByClass,
-} from "../../../server/insightsRepo";
-import type { Modality } from "../../../server/insightsRepo";
+} from "../../../server/insightsRepo.js";
 
 type ActivityBase = {
   objetivo: string;

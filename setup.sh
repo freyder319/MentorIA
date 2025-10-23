@@ -69,3 +69,4 @@ echo "   - PRUEBAS-BASICAS.md"
 echo "   - n8n-workflows.md"
 echo ""
 echo "🎉 ¡Configuración completada exitosamente!"
+
