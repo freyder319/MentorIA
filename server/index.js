@@ -1,5 +1,5 @@
-// Minimal Express server to proxy chat requests to an OpenAI-compatible API
-// Uses: OPENAI_API_KEY, OPENAI_BASE_URL (optional), OPENAI_MODEL
+// Minimal Express server using MCP (Model Context Protocol)
+// All AI functionality handled by internal MCP agents
 
 const express = require("express");
 const cors = require("cors");
